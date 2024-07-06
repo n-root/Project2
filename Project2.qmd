@@ -4,6 +4,20 @@ format: html
 editor: visual
 ---
 
+#### Note to self: I have chosen 'Open-Meteo' as my API
+
+## Libraries
+
+```{r}
+library(tidyverse)
+library(tibble)
+library(ggplot2)
+library(httr)
+library(jsonlite)
+library(imager)
+library(knitr)
+```
+
 ## Write a function that contacts the API
 
 #### Allow the user to easily customize their query to return specific data from the API
