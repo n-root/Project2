@@ -6,7 +6,7 @@ editor: visual
 
 #### Note to self: I have chosen 'Open-Meteo' as my API
 
-## Libraries
+## Establish Libraries
 
 ```{r}
 library(tidyverse)
@@ -17,10 +17,11 @@ library(jsonlite)
 library(knitr)
 ```
 
-## Write a function that contacts the API
+## Write a Function That Contacts the API
 
 ```{r}
-get_OMdata <- function(latitude, longitude, start_date, end_date) {
+# Function with cutomizable options
+get_OMdata <- function(latitude, longitude, start_date, end_date, variables = c("temperature_2m", "precipitation"), timezone = "UTC") {
   
   # Identify Open-Meteo API link
   web_URL <- "https://api.open-meteo.com/v1/forecast"
@@ -31,8 +32,8 @@ get_OMdata <- function(latitude, longitude, start_date, end_date) {
     longitude = longitude,
     start = start_date,
     end = end_date,
-    hourly = "temperature_2m,precipitation",
-    timezone = "UTC"
+    hourly = paste(variables, collapse = ","),
+    timezone = timezone
   )
   
   # GET request
@@ -51,10 +52,12 @@ get_OMdata <- function(latitude, longitude, start_date, end_date) {
   
   # Format the data
   df <- tibble(
-    time = as.POSIXct(hourly_data$time, format = "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
-    temperature_2m = hourly_data$temperature_2m,
-    precipitation = hourly_data$precipitation
-  )
+    time = as.POSIXct(hourly_data$time, format = "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"))
+  
+  # Loop through each variable and add each to the tibble
+  for (variable in variables) {
+    df[[variable]] <- hourly_data[[variable]]
+  }
   
   # Return well-formatted, parsed data in the form of a tibble
   return(df)
