@@ -14,11 +14,54 @@ library(tibble)
 library(ggplot2)
 library(httr)
 library(jsonlite)
-library(imager)
 library(knitr)
 ```
 
 ## Write a function that contacts the API
+
+```{r}
+get_OMdata <- function(latitude, longitude, start_date, end_date) {
+  
+  # Identify Open-Meteo API link
+  web_URL <- "https://api.open-meteo.com/v1/forecast"
+  
+  # Establish parameters
+  params <- list(
+    latitude = latitude,
+    longitude = longitude,
+    start = start_date,
+    end = end_date,
+    hourly = "temperature_2m,precipitation",
+    timezone = "UTC"
+  )
+  
+  # GET request
+  response <- GET(web_URL, query = params)
+  
+  # Check GET request
+  if (status_code(response) != 200) {
+    stop("Failed request")
+  }
+  
+  # Parse the data
+  OMdata <- fromJSON(content(response, "text", encoding = "UTF-8"))
+  
+  # Extract the data
+  hourly_data <- data$hourly
+  
+  # Format the data
+  df <- tibble(
+    time = as.POSIXct(hourly_data$time, format = "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+    temperature_2m = hourly_data$temperature_2m,
+    precipitation = hourly_data$precipitation
+  )
+  
+  # Return well-formatted, parsed data in the form of a tibble
+  return(df)
+  
+}
+```
+
 
 #### Allow the user to easily customize their query to return specific data from the API
 
