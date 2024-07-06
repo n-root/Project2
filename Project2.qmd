@@ -1,0 +1,73 @@
+---
+title: "Project2"
+format: html
+editor: visual
+---
+
+## Write a function that contacts the API
+
+#### Allow the user to easily customize their query to return specific data from the API
+
+
+#### Allow the user to request >= 6 different types of data
+
+
+#### Return well-formatted, parsed data in the form of a tibble
+
+
+## Produce common numerical summaries
+
+#### Contingency tables
+
+
+## Produce common graphical summaries
+
+#### Plot 1
+
+
+#### Plot 2
+
+
+#### Plot 3
+
+
+#### Plot 4
+
+
+# The App
+
+## About Tab
+
+#### Describe the purpose of the app
+
+
+#### Discuss the data and its source with a link
+
+
+#### Discuss the purpose of each tab
+
+
+#### Include a picture of
+
+
+## Data Download Tab
+
+#### Allow the user to specify changes
+
+
+#### Display the returned data
+
+
+#### Subset the data set
+
+
+#### Save the data as a file
+
+
+## Data Exploration Tab
+
+#### Allow the user to choose variables/combinations that are summarized via numerical/graphical summaries
+
+
+## Two dynamic UI elements
+
