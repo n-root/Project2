@@ -67,6 +67,7 @@ get_OMdata <- function(latitude, longitude, start_date, end_date, variables = c(
 
 
 ## Function 1: Querying current weather data
+
 ```{r}
 # Function with cutomizable options
 get_current_weather <- function(latitude, longitude, timezone = "UTC") {
@@ -96,19 +97,21 @@ get_current_weather <- function(latitude, longitude, timezone = "UTC") {
   current_data <- OMdata$current
   
   # Format the data
-  df <- tibble(
+  df_current <- tibble(
     time = as.POSIXct(current_data$time, format = "%Y-%m-%dT%H:%M:%SZ", tz = timezone),
     temperature = current_data$temperature,
     windspeed = current_data$windspeed
   )
   
   # Return well-formatted, parsed data in the form of a tibble
-  return(df)
+  return(df_current)
   
 }
 ```
 
+
 ## Function 2: Querying hourly weather data
+
 ```{r}
 # Function with cutomizable options
 get_hourly_forecast <- function(latitude, longitude, start_date, end_date, variables = c("temperature_2m", "precipitation"), timezone = "UTC") {
@@ -141,17 +144,117 @@ get_hourly_forecast <- function(latitude, longitude, start_date, end_date, varia
   hourly_data <- OMdata$hourly
   
   # Format the data
-  df <- tibble(
+  df_hourly <- tibble(
     time = as.POSIXct(hourly_data$time, format = "%Y-%m-%dT%H:%M:%SZ", tz = timezone)
   )
   
   # Loop through each variable and add each to the tibble
   for (variable in variables) {
-    df[[variable]] <- hourly_data[[variable]]
+    df_hourly[[variable]] <- hourly_data[[variable]]
   }
   
   # Return well-formatted, parsed data in the form of a tibble
-  return(df)
+  return(df_hourly)
+  
+}
+```
+
+
+## Function 3: Querying daily weather data
+
+```{r}
+# Function with cutomizable options
+get_daily_forecast <- function(latitude, longitude, start_date, end_date, variables = c("temperature_2m", "temperature_2m_min", "precipitation_sum"), timezone = "UTC") {
+  
+  # Identify Open-Meteo API link
+  web_URL <- "https://api.open-meteo.com/v1/forecast"
+  
+  # Establish parameters
+  params <- list(
+    latitude = latitude,
+    longitude = longitude,
+    start = start_date,
+    end = end_date,
+    daily = paste(variables, collapse = ","),
+    timezone = timezone
+  )
+  
+  # GET request
+  response <- GET(web_URL, query = params)
+  
+  # Check GET request
+  if (status_code(response) != 200) {
+    stop("Failed request")
+  }
+  
+  # Parse the data
+  OMdata <- fromJSON(content(response, "text", encoding = "UTF-8"))
+  
+  # Extract the data
+  daily_data <- OMdata$daily
+  
+  # Format the data
+  df_daily <- tibble(
+    date = as.Date(daily_data$time)
+  )
+  
+  # Loop through each variable and add each to the tibble
+  for (variable in variables) {
+    df_daily[[variable]] <- daily_data[[variable]]
+  }
+  
+  # Return well-formatted, parsed data in the form of a tibble
+  return(df_daily)
+  
+}
+```
+
+
+## Function 4: Querying historical weather data
+
+```{r}
+# Function with cutomizable options
+get_historical_weather <- function(latitude, longitude, start_date, end_date, variables = c("temperature_2m", "precipitation"), timezone = "UTC") {
+  
+  # Identify Open-Meteo API link
+  web_URL <- "https://api.open-meteo.com/v1/forecast"
+  
+  # Establish parameters
+  params <- list(
+    latitude = latitude,
+    longitude = longitude,
+    start = start_date,
+    end = end_date,
+    hourly = paste(variables, collapse = ","),
+    timezone = timezone
+  )
+  
+  # GET request
+  response <- GET(web_URL, query = params)
+  
+  # Check GET request
+  if (status_code(response) != 200) {
+    stop("Failed request")
+  }
+  
+  # Parse the data
+  OMdata <- fromJSON(content(response, "text", encoding = "UTF-8"))
+  
+  # Extract the data
+  hourly_data <- OMdata$hourly
+  
+  # Format the data
+  df_historical <- tibble(
+    time = as.POSIXct(hourly_data$time, format = "%Y-%m-%dT%H:%M:%SZ", tz = timezone)
+  )
+  
+  # Loop through each variable and add each to the tibble
+  for (variable in variables) {
+    df_historical[[variable]] <- hourly_data[[variable]]
+  }
+  
+  # Return well-formatted, parsed data in the form of a tibble
+  return(df_historical)
   
 }
 ```
