@@ -66,7 +66,7 @@ get_OMdata <- function(latitude, longitude, start_date, end_date, variables = c(
 ```
 
 
-## Function 1: Querying current weather data
+## Function 1: Querying Current Weather Data
 
 ```{r}
 # Function with cutomizable options
@@ -110,7 +110,7 @@ get_current_weather <- function(latitude, longitude, timezone = "UTC") {
 ```
 
 
-## Function 2: Querying hourly weather data
+## Function 2: Querying Hourly Weather Data
 
 ```{r}
 # Function with cutomizable options
@@ -160,7 +160,7 @@ get_hourly_forecast <- function(latitude, longitude, start_date, end_date, varia
 ```
 
 
-## Function 3: Querying daily weather data
+## Function 3: Querying Daily Weather Data
 
 ```{r}
 # Function with cutomizable options
@@ -210,7 +210,7 @@ get_daily_forecast <- function(latitude, longitude, start_date, end_date, variab
 ```
 
 
-## Function 4: Querying historical weather data
+## Function 4: Querying Historical Weather Data
 
 ```{r}
 # Function with cutomizable options
@@ -255,6 +255,92 @@ get_historical_weather <- function(latitude, longitude, start_date, end_date, va
   
   # Return well-formatted, parsed data in the form of a tibble
   return(df_historical)
+  
+}
+```
+
+
+## Function 5: Querying Air Quality Data
+
+```{r}
+# Function with cutomizable options
+get_air_quality <- function(latitude, longitude, timezone = "UTC") {
+  
+  # Identify Open-Meteo API link
+  web_URL <- "https://api.open-meteo.com/v1/forecast"
+  
+  # Establish parameters
+  params <- list(
+    latitude = latitude,
+    longitude = longitude,
+    timezone = timezone
+  )
+  
+  # GET request
+  response <- GET(web_URL, query = params)
+  
+  # Check GET request
+  if (status_code(response) != 200) {
+    stop("Failed request")
+  }
+  
+  # Parse the data
+  OMdata <- fromJSON(content(response, "text", encoding = "UTF-8"))
+  
+  # Extract the data
+  hourly_data <- OMdata$hourly
+  
+  # Format the data
+  df_air_quality <- tibble(
+    time = as.POSIXct(hourly_data$time, format = "%Y-%m-%dT%H:%M:%SZ", tz = timezone),
+    pm10 = hourly_data$pm10,
+    pm2_5 = hourly_data$pm2_5,
+    o3 = hourly_data#o3
+  )
+  
+  # Return well-formatted, parsed data in the form of a tibble
+  return(df_air_quality)
+  
+}
+```
+
+
+## Function 6: Querying Weather Alerts
+
+```{r}
+# Function with cutomizable options
+get_weather_alerts <- function(latitude, longitude) {
+  
+  # Identify Open-Meteo API link
+  web_URL <- "https://api.open-meteo.com/v1/forecast"
+  
+  # Establish parameters
+  params <- list(
+    latitude = latitude,
+    longitude = longitude
+  )
+  
+  # GET request
+  response <- GET(web_URL, query = params)
+  
+  # Check GET request
+  if (status_code(response) != 200) {
+    stop("Failed request")
+  }
+  
+  # Parse the data
+  OMdata <- fromJSON(content(response, "text", encoding = "UTF-8"))
+  
+  # Extract the data
+  alert_data <- OMdata$alerts
+  
+  # Format the data
+  df_weather_alerts <- tibble(
+    time = as.POSIXct(sapply(alert_data, function(x) x$time), format = "%Y-%m-%dT%H:%M:%SZ"), event = sapply(alert_data, function(x) x$event), description = sapply(alert_data, function(x) x$description)
+                      )
+  
+  # Return well-formatted, parsed data in the form of a tibble
+  return(df_weather_alerts)
   
 }
 ```
