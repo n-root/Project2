@@ -17,7 +17,7 @@ library(jsonlite)
 library(knitr)
 ```
 
-## Write a Function That Contacts the API
+## Write a Function That Contacts the API and is Customizable
 
 ```{r}
 # Function with cutomizable options
@@ -48,7 +48,7 @@ get_OMdata <- function(latitude, longitude, start_date, end_date, variables = c(
   OMdata <- fromJSON(content(response, "text", encoding = "UTF-8"))
   
   # Extract the data
-  hourly_data <- data$hourly
+  hourly_data <- OMdata$hourly
   
   # Format the data
   df <- tibble(
@@ -66,8 +66,95 @@ get_OMdata <- function(latitude, longitude, start_date, end_date, variables = c(
 ```
 
 
-#### Allow the user to easily customize their query to return specific data from the API
+## Function 1: Querying current weather data
+```{r}
+# Function with cutomizable options
+get_current_weather <- function(latitude, longitude, timezone = "UTC") {
+  
+  # Identify Open-Meteo API link
+  web_URL <- "https://api.open-meteo.com/v1/forecast"
+  
+  # Establish parameters
+  params <- list(
+    latitude = latitude,
+    longitude = longitude,
+    timezone = timezone
+  )
+  
+  # GET request
+  response <- GET(web_URL, query = params)
+  
+  # Check GET request
+  if (status_code(response) != 200) {
+    stop("Failed request")
+  }
+  
+  # Parse the data
+  OMdata <- fromJSON(content(response, "text", encoding = "UTF-8"))
+  
+  # Extract the data
+  current_data <- OMdata$current
+  
+  # Format the data
+  df <- tibble(
+    time = as.POSIXct(current_data$time, format = "%Y-%m-%dT%H:%M:%SZ", tz = timezone),
+    temperature = current_data$temperature,
+    windspeed = current_data$windspeed
+  )
+  
+  # Return well-formatted, parsed data in the form of a tibble
+  return(df)
+  
+}
+```
 
+## Function 2: Querying hourly weather data
+```{r}
+# Function with cutomizable options
+get_hourly_forecast <- function(latitude, longitude, start_date, end_date, variables = c("temperature_2m", "precipitation"), timezone = "UTC") {
+  
+  # Identify Open-Meteo API link
+  web_URL <- "https://api.open-meteo.com/v1/forecast"
+  
+  # Establish parameters
+  params <- list(
+    latitude = latitude,
+    longitude = longitude,
+    start = start_date,
+    end = end_date,
+    hourly = paste(variables, collapse = ","),
+    timezone = timezone
+  )
+  
+  # GET request
+  response <- GET(web_URL, query = params)
+  
+  # Check GET request
+  if (status_code(response) != 200) {
+    stop("Failed request")
+  }
+  
+  # Parse the data
+  OMdata <- fromJSON(content(response, "text", encoding = "UTF-8"))
+  
+  # Extract the data
+  hourly_data <- OMdata$hourly
+  
+  # Format the data
+  df <- tibble(
+    time = as.POSIXct(hourly_data$time, format = "%Y-%m-%dT%H:%M:%SZ", tz = timezone)
+  )
+  
+  # Loop through each variable and add each to the tibble
+  for (variable in variables) {
+    df[[variable]] <- hourly_data[[variable]]
+  }
+  
+  # Return well-formatted, parsed data in the form of a tibble
+  return(df)
+  
+}
+```
 
 #### Allow the user to request >= 6 different types of data
 
