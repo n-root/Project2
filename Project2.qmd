@@ -10,6 +10,7 @@ editor: visual
 
 ```{r}
 library(tidyverse)
+library(dplyr)
 library(tibble)
 library(ggplot2)
 library(httr)
@@ -110,11 +111,11 @@ get_current_weather <- function(latitude, longitude, timezone = "UTC") {
 ```
 
 
-## Function 2: Querying Hourly Weather Data
+## Function 2: Querying Wind Speed Data
 
 ```{r}
 # Function with cutomizable options
-get_hourly_forecast <- function(latitude, longitude, start_date, end_date, variables = c("temperature_2m", "precipitation"), timezone = "UTC") {
+get_wind_speed <- function(latitude, longitude, start_date, end_date, timezone = "UTC") {
   
   # Identify Open-Meteo API link
   web_URL <- "https://api.open-meteo.com/v1/forecast"
@@ -125,7 +126,7 @@ get_hourly_forecast <- function(latitude, longitude, start_date, end_date, varia
     longitude = longitude,
     start = start_date,
     end = end_date,
-    hourly = paste(variables, collapse = ","),
+    hourly = "windspeed_10m",
     timezone = timezone
   )
   
@@ -144,17 +145,12 @@ get_hourly_forecast <- function(latitude, longitude, start_date, end_date, varia
   hourly_data <- OMdata$hourly
   
   # Format the data
-  df_hourly <- tibble(
-    time = as.POSIXct(hourly_data$time, format = "%Y-%m-%dT%H:%M:%SZ", tz = timezone)
+  df_wind_speed <- tibble(
+    time = as.POSIXct(hourly_data$time, format = "%Y-%m-%dT%H:%M:%SZ", tz = timezone), windspeed_10m = hourly_data$windspeed_10m
   )
   
-  # Loop through each variable and add each to the tibble
-  for (variable in variables) {
-    df_hourly[[variable]] <- hourly_data[[variable]]
-  }
-  
   # Return well-formatted, parsed data in the form of a tibble
-  return(df_hourly)
+  return(df_wind_speed)
   
 }
 ```
@@ -210,11 +206,11 @@ get_daily_forecast <- function(latitude, longitude, start_date, end_date, variab
 ```
 
 
-## Function 4: Querying Historical Weather Data
+## Function 4: Querying Weather Conditions
 
 ```{r}
 # Function with cutomizable options
-get_historical_weather <- function(latitude, longitude, start_date, end_date, variables = c("temperature_2m", "precipitation"), timezone = "UTC") {
+get_weather_conditions <- function(latitude, longitude, start_date, end_date, timezone = "UTC") {
   
   # Identify Open-Meteo API link
   web_URL <- "https://api.open-meteo.com/v1/forecast"
@@ -225,7 +221,7 @@ get_historical_weather <- function(latitude, longitude, start_date, end_date, va
     longitude = longitude,
     start = start_date,
     end = end_date,
-    hourly = paste(variables, collapse = ","),
+    weather = "weather_description",
     timezone = timezone
   )
   
@@ -241,20 +237,15 @@ get_historical_weather <- function(latitude, longitude, start_date, end_date, va
   OMdata <- fromJSON(content(response, "text", encoding = "UTF-8"))
   
   # Extract the data
-  hourly_data <- OMdata$hourly
+  weather_desc_data <- OMdata$weather
   
   # Format the data
-  df_historical <- tibble(
-    time = as.POSIXct(hourly_data$time, format = "%Y-%m-%dT%H:%M:%SZ", tz = timezone)
+  df_weather_condition <- tibble(
+    time = as.POSIXct(weather_desc_data$time, format = "%Y-%m-%dT%H:%M:%SZ", tz = timezone), weather_description = weather_desc_data$weather_description
   )
   
-  # Loop through each variable and add each to the tibble
-  for (variable in variables) {
-    df_historical[[variable]] <- hourly_data[[variable]]
-  }
-  
   # Return well-formatted, parsed data in the form of a tibble
-  return(df_historical)
+  return(df_weather_condition)
   
 }
 ```
@@ -345,15 +336,16 @@ get_weather_alerts <- function(latitude, longitude) {
 }
 ```
 
-#### Allow the user to request >= 6 different types of data
-
-
-#### Return well-formatted, parsed data in the form of a tibble
-
-
 ## Produce common numerical summaries
 
-#### Contingency tables
+#### Contingency table
+
+```{r}
+# Collect data using hourly forecast function
+hourly_forecast <- get_hourly_forecast(latitude, longitude, start_date, end_date, variables)
+
+contingency_table <- table()
+```
 
 
 ## Produce common graphical summaries
