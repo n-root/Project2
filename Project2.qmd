@@ -397,17 +397,25 @@ ggplot(wind_speed_data %>% left_join(weather_desc_data2, by = "time"), aes(x = w
 #### Plot 4: Heatmap of Wind Speed by Hour and Weather Description
 
 ```{r}
+# Collect data
 wind_speed_data$hour <- format(wind_speed_data$time, "%H")
 
+# Format data
 heatmap_wind_data <- wind_speed_data %>%
   left_join(weather_desc_data2, by = "time") %>%
   group_by(hour, weather_description) %>%
   summarize(mean_wind_speed = mean(windspeed_10m, na.rm = TRUE)) %>%
   spread(weather_description, mean_wind_speed)
 
+# Create matrix
 heatmap_wind <- as.matrix(heatmap_wind_data[-1])
 rownames(heatmap_wind) <- heatmap_wind_data$hour
-heatmap_wind_melted <- melt(heatmap_wind, varnames = c("Hour", "Weather Description"), value.name =)
+
+# Convert matrix to long format
+heatmap_wind_melted <- melt(heatmap_wind, varnames = c("Hour", "Weather Description"), value.name = "Mean_Wind_Speed")
+
+# Plot heatmap
+ggplot(heatmap_wind_melted, aes(x = Hour, y = Weather_Description, fill = Mean_Wind_Speed)) + geom_title() + scale_fill_gradient(low = "blue", high = "red", na.value = "white") + labs(title = "Heatmap of Mean Wind Speed by Hour and Weather Description", x = "Hour", y = "Weather Description", fill = "Mean Wind Speed (m/s)") + theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
 
