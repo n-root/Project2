@@ -16,6 +16,10 @@ library(ggplot2)
 library(httr)
 library(jsonlite)
 library(knitr)
+library(shiny)
+library(shinydashboard)
+library(reshape2)
+library(DT)
 ```
 
 ## Write a Function That Contacts the API and is Customizable
@@ -421,13 +425,145 @@ ggplot(heatmap_wind_melted, aes(x = Hour, y = Weather_Description, fill = Mean_W
 
 # The App
 
+```{r}
+ui <- dashboardPage(
+  dashboardHeader(title = "Open-Meteo API App"),
+  dashboardSidebar(
+    sidebarMenu(
+      menuItem("About", tabName = "About", icon = icon("info-circle")),
+      menuItem("Data Download", tabName = "Data Download", icon = icon("download")),
+      menuItem("Data Exploration", tabName = "Data Explore", icon = icon("chart-bar"))
+    )
+  ),
+  dashboardBody(
+    tabItems(
+      tabItem(tabName = "About",
+              fluidPage(
+                titlePanel("About this App"),
+                sidebarLayout(
+                  sidebarPanel(
+                    h4("App Purpose"),
+                    p("This app allows users to query weather data from the Open-Meteo API, a public API."),
+                    h4("Data Source"),
+                    p("The data contained within this app comes from the Open-Meteo API, found ", a(href = "https://api.open-meteo.com/v1/forecast", "here"), "."),
+                    h4("Each Tabs' Purpose"),
+                    p("1. The purpose of the 'About' tab is to provide background information about this applicaiton."),
+                    p("2. The purpose of the 'Data Download' tab is to query and download weather data."),
+                    p("3. The purpose of the 'Data Exploration' tab is to further explore our weather data with graphical and numerical summaries."),
+                    img(src = "", height = "100px")
+                  ),
+                  mainPanel()
+                )
+              )),
+      tabItem(tabName = "download",
+              fluidPage(
+                titlePanel("Data Download"),
+                sidebarLayout(
+                  sidebarPanel(
+                    numericInput("latitude", "Latitude", value = 30.2672),
+                    numericInput("longitude", "Longitude", value = 97.7431),
+                    dateInput("start_date", "Start Date", value = "2023-07-07"),
+                    dateInput("end_date", "End Date", value = "2023-07-08"),
+                    selectInput("data_type", "Data Type", choice = c("Current Weather", "Wind Speed", "Daily Weather", "Weather Condition", "Air Quality", "Weather Alerts")),
+                    actionButton("query_data", "Query Data"),
+                    br(),
+                    downloadButton("download_data", "Download Data")
+                  ),
+                  mainPanel(
+                    dataTableOutput("data_table")
+                  )
+                )
+              )),
+      tabItem(tabName = "explore",
+              fluidPage(
+                titlePanel("Data Exploration"),
+                sidebarLayout(
+                  sidebarPanel(
+                    selectInput("variable_x", "X Variable", choices = NULL),
+                    selectInput("variable_y", "Y Variable", choices = NULL),
+                    selectInput("plot_type", "Plot Type", choices = c("Line Plot", "Box Plot", "Bar Plot", "Heatmap")),
+                    actionButton("update_plot", "Update Plot")
+                  ),
+                  mainPanel(
+                    plotOutput("plot")
+                  )
+                )
+              ))
+      )
+    )
+  )
+
+server <- function(input, output, session) {
+  data_reactive <- reactiveVal(NULL)
+  
+  observeEvent(input$query_data, {
+    data <- switch(input$data_type,
+                   "Current Weather" = get_current_weather(input$latitude, input$longitude),
+                   "Wind Speed" = get_wind_speed(input$latitude, input$longitude, input$start_date, input$end_date),
+                   "Daily Weather" = get_daily_forecast(input$latitude, input$longitude, input$start_date, input$end_date),
+                   "Weather Condition" = get_weather_conditions(input$latitude, input$longitude, input$start_date, input$end_date),
+                   "Air Quality" = get_air_quality(input$latitude, input$longitude),
+                   "Weather Alerts" = get_weather_alerts(input$latitude, input$longitude))
+    data_reactive(data)
+  })
+  
+  output$data_table <- renderDataTable({
+    data_reactive()
+  })
+  
+  output$download_data <- downloadHandler(
+    filename = function() { paste(input$data_type, ".csv", sep = "") },
+    content = function(file) {
+      write.csv(data_reactive(), file)
+    }
+  )
+  
+  observe({
+    data <- data_reactive()
+    if (!is.null(data)) {
+      updateSelectInput(session, "variable_x", choices = names(data))
+      updateSelectInput(session, "variable_y", choices = names(data))
+    }
+  })
+  
+  output$plot <- renderPlot({
+    req(input$variable_x, input$variable_y)
+    data <- data_reactive()
+    
+    p <- ggplot(data, aes_string(x = input$variable_x, y = input$variable_y))
+    
+    p <- switch(input$plot_type,
+                "Line Plot" = p + geom_line(),
+                "Box Plot" = p + geom_boxplot(),
+                "Bar Plot" = p + geom_bar(stat = "identity"),
+                "Heatmap" = {
+                  data_long <- melt(data, id.vars = input$variable_x)
+                  ggplot(data_long, aes_string(x = input$variable_x, y = "variable", fill = "value")) +
+                    geom_tile() +
+                    scale_fill_gradient(low = "blue", high = "red", na.rm = "white")
+                })
+  p + labs(title = paste(input$plot_type, "of", input$variable_y, "by", input$variable_x),
+           x = input$variable_x,
+           y = input$variable_y) +
+    theme_minimal()
+  })
+}
+```
+
+```{r}
+# Run the app
+shinyApp(ui, server)
+```
+
+
 ## About Tab
+
 
 #### Describe the purpose of the app
 
 
 #### Discuss the data and its source with a link
-
+ 
 
 #### Discuss the purpose of each tab
 
