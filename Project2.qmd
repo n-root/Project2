@@ -341,25 +341,74 @@ get_weather_alerts <- function(latitude, longitude) {
 #### Contingency table
 
 ```{r}
-# Collect data using hourly forecast function
-hourly_forecast <- get_hourly_forecast(latitude, longitude, start_date, end_date, variables)
+# Collect data using weather description function
+weather_desc_data2 <- get_weather_conditions(30.2672, 97.7431, "2023-07-07T00:00:00Z", "2023-07-08T00:00:00Z")
 
-contingency_table <- table()
+# Create contingency table
+contingency_table <- table(weather_desc_data2)
+
+# Print contingency table
+contingency_table
 ```
+#### Numerical Summary of Wind Speed
 
+```{r}
+# Collect data using wind speed function
+wind_speed_data <- get_wind_speed(30.2672, 97.7431, "2023-07-07T00:00:00Z", "2023-07-08T00:00:00Z")
+
+# Create numerical summary
+wind_speed_summary <- wind_speed_data %>%
+  left_join(weather_desc_data2, by = "time") %>%
+  group_by(weather_description) %>%
+  summarize(
+    mean_wind_speed = mean(windspeed_10m, na.rm = TRUE),
+    sd_wind_speed = sd(windspeed_10m, na.rm = TRUE),
+    median_wind_speed = median(windspeed_10m, na.rm = TRUE),
+    min_wind_speed = min(windspeed_10m, na.rm = TRUE),
+    max_wind_speed = max(windspeed_10m, na.rm = TRUE)
+  )
+
+# Print numerical summary
+wind_speed_summary
+```
 
 ## Produce common graphical summaries
 
-#### Plot 1
+#### Plot 1: Line Plot
+
+```{r}
+ggplot(wind_speed_data, aes(x = time, y = windspeed_10m, color = as.factor(weather_desc_data2$weather_description))) + geom_line() + labs(title = "Wind Speed Over Time", x = "Time", y = "Wind Speed (m/s)", color = "Weather Description")
+```
 
 
-#### Plot 2
+#### Plot 2: Box Plot
+
+```{r}
+ggplot(wind_speed_data %>% left_join(weather_desc_data2, by = "time"), aes(x = weather_description, y = windspeed_10m, fill = weather_description)) + geom_boxplot() + labs(title = "Wind Speed Distribution by Weather Description", x = "Weather Description", y = "Wind Speed (m/s)") + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
 
 
-#### Plot 3
+#### Plot 3: Bar Plot
+```{r}
+ggplot(wind_speed_data %>% left_join(weather_desc_data2, by = "time"), aes(x = weather_description, y = windspeed_10m, fill = weather_description)) + geom_boxplot() + labs(title = "Wind Speed Distribution by Weather Description", x = "Weather Description", y = "Wind Speed (m/s)") + theme(axis.text.x = element_text(angle = 45, hjust =1))
+```
 
 
-#### Plot 4
+#### Plot 4: Heatmap of Wind Speed by Hour and Weather Description
+
+```{r}
+wind_speed_data$hour <- format(wind_speed_data$time, "%H")
+
+heatmap_wind_data <- wind_speed_data %>%
+  left_join(weather_desc_data2, by = "time") %>%
+  group_by(hour, weather_description) %>%
+  summarize(mean_wind_speed = mean(windspeed_10m, na.rm = TRUE)) %>%
+  spread(weather_description, mean_wind_speed)
+
+heatmap_wind <- as.matrix(heatmap_wind_data[-1])
+rownames(heatmap_wind) <- heatmap_wind_data$hour
+heatmap_wind_melted <- melt(heatmap_wind, varnames = c("Hour", "Weather Description"), value.name =)
+```
 
 
 # The App
