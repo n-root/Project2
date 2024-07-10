@@ -10,22 +10,20 @@ editor: visual
 
 ```{r}
 library(tidyverse)
-library(dplyr)
-library(tibble)
 library(ggplot2)
 library(httr)
 library(jsonlite)
 library(knitr)
-library(shiny)
-library(shinydashboard)
-library(reshape2)
-library(DT)
+#library(shiny)
+#library(shinydashboard)
+#library(reshape2)
+#library(DT)
 ```
 
 ## Write a Function That Contacts the API and is Customizable
 
 ```{r}
-# Function with cutomizable options
+# Function with customizable options
 get_OMdata <- function(latitude, longitude, start_date, end_date, variables = c("temperature_2m", "precipitation"), timezone = "UTC") {
   
   # Identify Open-Meteo API link
@@ -43,11 +41,6 @@ get_OMdata <- function(latitude, longitude, start_date, end_date, variables = c(
   
   # GET request
   response <- GET(web_URL, query = params)
-  
-  # Check GET request
-  if (status_code(response) != 200) {
-    stop("Failed request")
-  }
   
   # Parse the data
   OMdata <- fromJSON(content(response, "text", encoding = "UTF-8"))
@@ -74,11 +67,11 @@ get_OMdata <- function(latitude, longitude, start_date, end_date, variables = c(
 ## Function 1: Querying Current Weather Data
 
 ```{r}
-# Function with cutomizable options
+# Function with customizable options
 get_current_weather <- function(latitude, longitude, timezone = "UTC") {
   
   # Identify Open-Meteo API link
-  web_URL <- "https://api.open-meteo.com/v1/forecast"
+  web_URL <- paste0("https://api.open-meteo.com/v1/forecast?latitude=", latitude, "&longitude=", longitude, "&current_weather=true")
   
   # Establish parameters
   params <- list(
@@ -89,11 +82,6 @@ get_current_weather <- function(latitude, longitude, timezone = "UTC") {
   
   # GET request
   response <- GET(web_URL, query = params)
-  
-  # Check GET request
-  if (status_code(response) != 200) {
-    stop("Failed request")
-  }
   
   # Parse the data
   OMdata <- fromJSON(content(response, "text", encoding = "UTF-8"))
@@ -118,11 +106,11 @@ get_current_weather <- function(latitude, longitude, timezone = "UTC") {
 ## Function 2: Querying Wind Speed Data
 
 ```{r}
-# Function with cutomizable options
-get_wind_speed <- function(latitude, longitude, start_date, end_date, timezone = "UTC") {
+# Function with customizable options
+get_windspeed <- function(latitude, longitude, start_date, end_date, timezone = "UTC") {
   
   # Identify Open-Meteo API link
-  web_URL <- "https://api.open-meteo.com/v1/forecast"
+  web_URL <- paste0("https://api.open-meteo.com/v1/forecast?latitude=", latitude, "&longitude=", longitude, "&current_weather=true")
   
   # Establish parameters
   params <- list(
@@ -130,31 +118,26 @@ get_wind_speed <- function(latitude, longitude, start_date, end_date, timezone =
     longitude = longitude,
     start = start_date,
     end = end_date,
-    hourly = "windspeed_10m",
+    windspeed = "windspeed_10m",
     timezone = timezone
   )
   
   # GET request
   response <- GET(web_URL, query = params)
   
-  # Check GET request
-  if (status_code(response) != 200) {
-    stop("Failed request")
-  }
-  
   # Parse the data
   OMdata <- fromJSON(content(response, "text", encoding = "UTF-8"))
   
   # Extract the data
-  hourly_data <- OMdata$hourly
+  windspeed_data <- OMdata$windspeed
   
   # Format the data
-  df_wind_speed <- tibble(
-    time = as.POSIXct(hourly_data$time, format = "%Y-%m-%dT%H:%M:%SZ", tz = timezone), windspeed_10m = hourly_data$windspeed_10m
+  df_windspeed <- tibble(
+    time = as.POSIXct(windspeed_data$time, format = "%Y-%m-%dT%H:%M:%SZ", tz = timezone), windspeed_10m = windspeed_data$windspeed_10m
   )
   
   # Return well-formatted, parsed data in the form of a tibble
-  return(df_wind_speed)
+  return(df_windspeed)
   
 }
 ```
@@ -163,11 +146,11 @@ get_wind_speed <- function(latitude, longitude, start_date, end_date, timezone =
 ## Function 3: Querying Daily Weather Data
 
 ```{r}
-# Function with cutomizable options
+# Function with customizable options
 get_daily_forecast <- function(latitude, longitude, start_date, end_date, variables = c("temperature_2m", "temperature_2m_min", "precipitation_sum"), timezone = "UTC") {
   
   # Identify Open-Meteo API link
-  web_URL <- "https://api.open-meteo.com/v1/forecast"
+  web_URL <- paste0("https://api.open-meteo.com/v1/forecast?latitude=", latitude, "&longitude=", longitude, "&daily=temperature_2m_max,temperature_2m_min&timezone=auto")
   
   # Establish parameters
   params <- list(
@@ -182,11 +165,6 @@ get_daily_forecast <- function(latitude, longitude, start_date, end_date, variab
   # GET request
   response <- GET(web_URL, query = params)
   
-  # Check GET request
-  if (status_code(response) != 200) {
-    stop("Failed request")
-  }
-  
   # Parse the data
   OMdata <- fromJSON(content(response, "text", encoding = "UTF-8"))
   
@@ -195,13 +173,8 @@ get_daily_forecast <- function(latitude, longitude, start_date, end_date, variab
   
   # Format the data
   df_daily <- tibble(
-    date = as.Date(daily_data$time)
+    date = as.Date(daily_data$time), temperature_2m_max = daily_data$temperature_2m_max, temperature_2m_min = daily_data$temperature_2m_min, precipitation_sum = daily_data$precipitation_sum
   )
-  
-  # Loop through each variable and add each to the tibble
-  for (variable in variables) {
-    df_daily[[variable]] <- daily_data[[variable]]
-  }
   
   # Return well-formatted, parsed data in the form of a tibble
   return(df_daily)
@@ -213,11 +186,11 @@ get_daily_forecast <- function(latitude, longitude, start_date, end_date, variab
 ## Function 4: Querying Weather Conditions
 
 ```{r}
-# Function with cutomizable options
+# Function with customizable options
 get_weather_conditions <- function(latitude, longitude, start_date, end_date, timezone = "UTC") {
   
   # Identify Open-Meteo API link
-  web_URL <- "https://api.open-meteo.com/v1/forecast"
+  web_URL <- paste0("https://api.open-meteo.com/v1/forecast?latitude=", latitude, "&longitude=", longitude, "&current_weather=true")
   
   # Establish parameters
   params <- list(
@@ -225,59 +198,12 @@ get_weather_conditions <- function(latitude, longitude, start_date, end_date, ti
     longitude = longitude,
     start = start_date,
     end = end_date,
-    weather = "weather_description",
+    hourly = "weather_description",
     timezone = timezone
   )
   
   # GET request
   response <- GET(web_URL, query = params)
-  
-  # Check GET request
-  if (status_code(response) != 200) {
-    stop("Failed request")
-  }
-  
-  # Parse the data
-  OMdata <- fromJSON(content(response, "text", encoding = "UTF-8"))
-  
-  # Extract the data
-  weather_desc_data <- OMdata$weather
-  
-  # Format the data
-  df_weather_condition <- tibble(
-    time = as.POSIXct(weather_desc_data$time, format = "%Y-%m-%dT%H:%M:%SZ", tz = timezone), weather_description = weather_desc_data$weather_description
-  )
-  
-  # Return well-formatted, parsed data in the form of a tibble
-  return(df_weather_condition)
-  
-}
-```
-
-
-## Function 5: Querying Air Quality Data
-
-```{r}
-# Function with cutomizable options
-get_air_quality <- function(latitude, longitude, timezone = "UTC") {
-  
-  # Identify Open-Meteo API link
-  web_URL <- "https://api.open-meteo.com/v1/forecast"
-  
-  # Establish parameters
-  params <- list(
-    latitude = latitude,
-    longitude = longitude,
-    timezone = timezone
-  )
-  
-  # GET request
-  response <- GET(web_URL, query = params)
-  
-  # Check GET request
-  if (status_code(response) != 200) {
-    stop("Failed request")
-  }
   
   # Parse the data
   OMdata <- fromJSON(content(response, "text", encoding = "UTF-8"))
@@ -286,11 +212,45 @@ get_air_quality <- function(latitude, longitude, timezone = "UTC") {
   hourly_data <- OMdata$hourly
   
   # Format the data
+  df_weather_conditions <- tibble(
+    time = as.POSIXct(hourly_data$time, format = "%Y-%m-%dT%H:%M:%SZ", tz = timezone), weather_description = hourly_data$weather_description
+  )
+  
+  # Return well-formatted, parsed data in the form of a tibble
+  return(df_weather_conditions)
+  
+}
+```
+
+
+## Function 5: Querying Air Quality Data
+
+```{r}
+# Function with customizable options
+get_air_quality <- function(latitude, longitude, timezone = "UTC") {
+  
+  # Identify Open-Meteo API link
+  web_URL <- paste0("https://api.open-meteo.com/v1/forecast?latitude=", latitude, "&longitude=", longitude, "&hourly=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone&timezone=auto")
+  
+  # Establish parameters
+  params <- list(
+    latitude = latitude,
+    longitude = longitude,
+    timezone = timezone
+  )
+  
+  # GET request
+  response <- GET(web_URL, query = params)
+
+  # Parse the data
+  OMdata <- fromJSON(content(response, "text", encoding = "UTF-8"))
+  
+  # Format the data
   df_air_quality <- tibble(
-    time = as.POSIXct(hourly_data$time, format = "%Y-%m-%dT%H:%M:%SZ", tz = timezone),
-    pm10 = hourly_data$pm10,
-    pm2_5 = hourly_data$pm2_5,
-    o3 = hourly_data#o3
+    time = as.POSIXct(OMdata$time, format = "%Y-%m-%dT%H:%M:%SZ", tz = timezone),
+    pm10 = OMdata$pm10,
+    pm2_5 = OMdata$pm2_5,
+    o3 = OMdata$o3
   )
   
   # Return well-formatted, parsed data in the form of a tibble
@@ -307,7 +267,7 @@ get_air_quality <- function(latitude, longitude, timezone = "UTC") {
 get_weather_alerts <- function(latitude, longitude) {
   
   # Identify Open-Meteo API link
-  web_URL <- "https://api.open-meteo.com/v1/forecast"
+  web_URL <- paste0("https://api.open-meteo.com/v1/forecast?latitude=", latitude, "&longitude=", longitude, "&current_weather=true&timezone=auto")
   
   # Establish parameters
   params <- list(
@@ -317,11 +277,6 @@ get_weather_alerts <- function(latitude, longitude) {
   
   # GET request
   response <- GET(web_URL, query = params)
-  
-  # Check GET request
-  if (status_code(response) != 200) {
-    stop("Failed request")
-  }
   
   # Parse the data
   OMdata <- fromJSON(content(response, "text", encoding = "UTF-8"))
@@ -340,29 +295,32 @@ get_weather_alerts <- function(latitude, longitude) {
 }
 ```
 
-## Produce common numerical summaries
+## Produce Common Numerical Summaries
 
 #### Contingency table
 
 ```{r}
-# Collect data using weather description function
-weather_desc_data2 <- get_weather_conditions(30.2672, 97.7431, "2023-07-07T00:00:00Z", "2023-07-08T00:00:00Z")
+# Collect data using functions
+ex_wc_data <- get_weather_conditions(30.2672, 97.7431, "2023-07-07T00:00:00Z", "2023-07-08T00:00:00Z")
+
+ex_dw_data <- get_daily_forecast(30.2672, 97.7431, "2023-07-07T00:00:00Z", "2023-07-08T00:00:00Z")
+
 
 # Create contingency table
-contingency_table <- table(weather_desc_data2)
+contingency_table <- table(ex_wc_data$weather_description, ex_dw_data$temperature_2m_max)
 
 # Print contingency table
 contingency_table
 ```
-#### Numerical Summary of Wind Speed
+#### Numerical summary of wind speed
 
 ```{r}
 # Collect data using wind speed function
-wind_speed_data <- get_wind_speed(30.2672, 97.7431, "2023-07-07T00:00:00Z", "2023-07-08T00:00:00Z")
+ex_ws_data <- get_windspeed(30.2672, 97.7431, "2023-07-07T00:00:00Z", "2023-07-08T00:00:00Z")
 
 # Create numerical summary
-wind_speed_summary <- wind_speed_data %>%
-  left_join(weather_desc_data2, by = "time") %>%
+windspeed_summary <- exact_ws_data %>%
+  left_join(exact_weather_cond_data, by = "time") %>%
   group_by(weather_description) %>%
   summarize(
     mean_wind_speed = mean(windspeed_10m, na.rm = TRUE),
@@ -373,7 +331,7 @@ wind_speed_summary <- wind_speed_data %>%
   )
 
 # Print numerical summary
-wind_speed_summary
+windspeed_summary
 ```
 
 ## Produce common graphical summaries
@@ -381,20 +339,20 @@ wind_speed_summary
 #### Plot 1: Line Plot
 
 ```{r}
-ggplot(wind_speed_data, aes(x = time, y = windspeed_10m, color = as.factor(weather_desc_data2$weather_description))) + geom_line() + labs(title = "Wind Speed Over Time", x = "Time", y = "Wind Speed (m/s)", color = "Weather Description")
+ggplot(windspeed_data, aes(x = time, y = windspeed_10m, color = as.factor(exact_weather_cond_data$weather_description))) + geom_line() + labs(title = "Wind Speed Over Time", x = "Time", y = "Wind Speed (m/s)", color = "Weather Description")
 ```
 
 
 #### Plot 2: Box Plot
 
 ```{r}
-ggplot(wind_speed_data %>% left_join(weather_desc_data2, by = "time"), aes(x = weather_description, y = windspeed_10m, fill = weather_description)) + geom_boxplot() + labs(title = "Wind Speed Distribution by Weather Description", x = "Weather Description", y = "Wind Speed (m/s)") + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggplot(windspeed_data %>% left_join(exact_weather_cond_data, by = "time"), aes(x = weather_description, y = windspeed_10m, fill = weather_description)) + geom_boxplot() + labs(title = "Wind Speed Distribution by Weather Description", x = "Weather Description", y = "Wind Speed (m/s)") + theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
 
 #### Plot 3: Bar Plot
 ```{r}
-ggplot(wind_speed_data %>% left_join(weather_desc_data2, by = "time"), aes(x = weather_description, y = windspeed_10m, fill = weather_description)) + geom_boxplot() + labs(title = "Wind Speed Distribution by Weather Description", x = "Weather Description", y = "Wind Speed (m/s)") + theme(axis.text.x = element_text(angle = 45, hjust =1))
+ggplot(exact_ws_data %>% left_join(exact_weather_cond_data, by = "time"), aes(x = weather_description, y = windspeed_10m, fill = weather_description)) + geom_boxplot() + labs(title = "Wind Speed Distribution by Weather Description", x = "Weather Description", y = "Wind Speed (m/s)") + theme(axis.text.x = element_text(angle = 45, hjust =1))
 ```
 
 
@@ -402,11 +360,11 @@ ggplot(wind_speed_data %>% left_join(weather_desc_data2, by = "time"), aes(x = w
 
 ```{r}
 # Collect data
-wind_speed_data$hour <- format(wind_speed_data$time, "%H")
+exact_ws_data$hour <- format(exact_ws_data$time, "%H")
 
 # Format data
-heatmap_wind_data <- wind_speed_data %>%
-  left_join(weather_desc_data2, by = "time") %>%
+heatmap_wind_data <- exact_ws_data %>%
+  left_join(exact_weather_cond_data, by = "time") %>%
   group_by(hour, weather_description) %>%
   summarize(mean_wind_speed = mean(windspeed_10m, na.rm = TRUE)) %>%
   spread(weather_description, mean_wind_speed)
@@ -423,7 +381,7 @@ ggplot(heatmap_wind_melted, aes(x = Hour, y = Weather_Description, fill = Mean_W
 ```
 
 
-# The App
+## The App
 
 ```{r}
 ui <- dashboardPage(
