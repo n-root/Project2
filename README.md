@@ -1,7 +1,7 @@
 # Project2
 
 #### Brief Description
-This app is ___. Its purpose is to ___. It does ____.
+This app is for the Open-Meteo API, which encompasses weather data. Its purpose is to allows users to query weather data directly from the public API Open-Meteo.
 
 #### List of Necessary Packages
 - ggplot2
